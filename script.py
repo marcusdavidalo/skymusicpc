@@ -11,8 +11,8 @@ SAVED_SONGS_FILE = "saved_songs.json"
 LAST_LOADED_SONG_FILE = "last_loaded_song.json"
 
 # Global variables
-delay = 0.015
-auto_delay = False
+delay = 0.030
+auto_delay = True
 
 # Define the key mapping
 keyMapping = {
@@ -220,13 +220,14 @@ def update_sidebar(notes=None):
     if notes is None:
         notes = saved_music
     if not notes:
-        sidebar.insert(tk.END, "No Songs Saved")
+        label = tk.Label(sidebar, text="No Songs Saved", fg=current_theme["fg"], bg=current_theme["bg"])
+        label.pack(fill=tk.X)
     else:
         for i, music in enumerate(notes):
             frame = tk.Frame(sidebar, bg=current_theme["bg"])
             frame.pack(fill=tk.X)
-            label = tk.Label(frame, text=music["name"], fg=current_theme["fg"], bg=current_theme["bg"])
-            label.pack(side=tk.LEFT)
+            label = tk.Label(frame, text=music["name"], fg=current_theme["fg"], bg=current_theme["bg"], anchor='w')
+            label.pack(side=tk.LEFT, fill=tk.X, expand=True)
             load_button = tk.Button(frame, text="Load", command=lambda i=i: load_sidebar_music(i), bg=current_theme["button_bg"], fg=current_theme["button_fg"])
             load_button.pack(side=tk.RIGHT)
             delete_button = tk.Button(frame, text="Delete", command=lambda i=i: delete_music(i), bg=current_theme["button_bg"], fg=current_theme["button_fg"])
@@ -249,13 +250,10 @@ def update_theme():
     root.config(bg=current_theme["bg"])
     for child in root.winfo_children():
         child.config(fg=current_theme["fg"], bg=current_theme["bg"])
-    load_button.config(bg=current_theme["button_bg"], fg=current_theme["button_fg"])
-    stop_button.config(bg=current_theme["button_bg"], fg=current_theme["button_fg"])
-    hotkey_button.config(bg=current_theme["button_bg"], fg=current_theme["button_fg"])
-    theme_button.config(bg=current_theme["button_bg"], fg=current_theme["button_fg"])
-    settings_button.config(bg=current_theme["button_bg"], fg=current_theme["button_fg"])
+    for widget in [load_button, stop_button, hotkey_button, theme_button, settings_button]:
+        widget.config(bg=current_theme["button_bg"], fg=current_theme["button_fg"])
     delay_slider.config(fg=current_theme["fg"], bg=current_theme["bg"], highlightbackground=current_theme["bg"])
-    auto_delay_checkbox.config(fg=current_theme["fg"], bg=current_theme["bg"], highlightbackground=current_theme["bg"])
+    auto_delay_checkbox.config(fg=current_theme["fg"], bg=current_theme["bg"], selectcolor=current_theme["bg"])
 
 def toggle_auto_delay(state):
     global auto_delay
@@ -272,28 +270,30 @@ root.config(bg=current_theme["bg"])
 sidebar = tk.Frame(root, width=200, bg=current_theme["bg"])
 sidebar.pack(side=tk.LEFT, fill=tk.Y)
 
-load_button = tk.Button(root, text="Load Music", command=load_music_from_file, bg=current_theme["button_bg"], fg=current_theme["button_fg"])
+main_frame = tk.Frame(root, bg=current_theme["bg"])
+main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+load_button = tk.Button(main_frame, text="Load Music", command=load_music_from_file, bg=current_theme["button_bg"], fg=current_theme["button_fg"])
 load_button.pack(pady=10)
 
-delay_slider = tk.Scale(root, from_=0.001, to_=1.0, resolution=0.001, orient=tk.HORIZONTAL, label="Delay (seconds)", fg=current_theme["fg"], bg=current_theme["bg"])
+delay_slider = tk.Scale(main_frame, from_=0.001, to_=1.0, resolution=0.001, orient=tk.HORIZONTAL, label="Delay (seconds)", fg=current_theme["fg"], bg=current_theme["bg"])
 delay_slider.set(delay)
 delay_slider.pack(pady=10)
 
-auto_delay = True  # Set initial auto delay
-auto_delay_var = tk.BooleanVar()
-auto_delay_checkbox = tk.Checkbutton(root, text="Auto Delay", variable=auto_delay_var, command=lambda: toggle_auto_delay(auto_delay_var.get()), fg=current_theme["fg"], bg=current_theme["bg"], selectcolor=current_theme["bg"])
+auto_delay_var = tk.BooleanVar(value=auto_delay)
+auto_delay_checkbox = tk.Checkbutton(main_frame, text="Auto Delay", variable=auto_delay_var, command=lambda: toggle_auto_delay(auto_delay_var.get()), fg=current_theme["fg"], bg=current_theme["bg"], selectcolor=current_theme["bg"])
 auto_delay_checkbox.pack()
 
-hotkey_button = tk.Button(root, text="Hotkey Settings", command=lambda: settings_window.deiconify(), bg=current_theme["button_bg"], fg=current_theme["button_fg"])
+hotkey_button = tk.Button(main_frame, text="Hotkey Settings", command=lambda: settings_window.deiconify(), bg=current_theme["button_bg"], fg=current_theme["button_fg"])
 hotkey_button.pack(pady=10)
 
-theme_button = tk.Button(root, text="Toggle Theme", command=toggle_theme, bg=current_theme["button_bg"], fg=current_theme["button_fg"])
+theme_button = tk.Button(main_frame, text="Toggle Theme", command=toggle_theme, bg=current_theme["button_bg"], fg=current_theme["button_fg"])
 theme_button.pack(pady=10)
 
-stop_button = tk.Button(root, text="Stop Music", command=stop_music, bg=current_theme["button_bg"], fg=current_theme["button_fg"])
+stop_button = tk.Button(main_frame, text="Stop Music", command=stop_music, bg=current_theme["button_bg"], fg=current_theme["button_fg"])
 stop_button.pack(pady=10)
 
-settings_button = tk.Button(root, text="Settings", command=lambda: settings_window.deiconify(), bg=current_theme["button_bg"], fg=current_theme["button_fg"])
+settings_button = tk.Button(main_frame, text="Settings", command=lambda: settings_window.deiconify(), bg=current_theme["button_bg"], fg=current_theme["button_fg"])
 settings_button.pack(pady=10)
 
 settings_window = tk.Toplevel(root)
