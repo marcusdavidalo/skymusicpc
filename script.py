@@ -53,7 +53,7 @@ def play_music(notes):
         current_time = notes[current_note_index]['time']
         keys_to_press = []
 
-        while current_note_index < len(notes) and notes[current_note_index]['time'] == current_time:
+        while current_note_index < len(notes) and abs(notes[current_note_index]['time'] - current_time) <= 35:
             key = notes[current_note_index]['key']
             mapped_key = keyMapping.get(key)
             if mapped_key:
@@ -65,10 +65,14 @@ def play_music(notes):
         
         if auto_delay and current_note_index < len(notes):
             next_time = notes[current_note_index]['time']
-            calculated_delay = max(0, (next_time - current_time) / 1000 - 0.005)  # Subtract a small value to ensure overlap
+            calculated_delay = max(0, (next_time - current_time) / 1000 - 0.005)
             time.sleep(calculated_delay)
         else:
             time.sleep(delay_slider.get())
+
+        # Add a delay before releasing the keys for the last note
+        if current_note_index == len(notes):
+            time.sleep(1)
 
         for key in keys_to_press:
             keyboard.release(key)
