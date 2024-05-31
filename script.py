@@ -180,6 +180,13 @@ def save_music(notes, path):
         json.dump({"notes": notes, "name": name}, f)
     
     return True  # Indicate that saving was successful
+    
+def load_saved_songs():
+    if os.path.exists(SAVED_SONGS_FILE):
+        with open(SAVED_SONGS_FILE, 'r') as f:
+            global saved_music
+            saved_music = json.load(f)
+            update_sidebar(saved_music)
 
 def show_error_message(message):
     messagebox.showerror("Error", message)
@@ -188,12 +195,6 @@ def load_music(notes):
     global loaded_notes
     loaded_notes = notes
 
-def load_saved_songs():
-    if os.path.exists(SAVED_SONGS_FILE):
-        with open(SAVED_SONGS_FILE, 'r') as f:
-            global saved_music
-            saved_music = json.load(f)
-            update_sidebar(saved_music)
 
 def load_last_song():
     if os.path.exists(LAST_LOADED_SONG_FILE):
