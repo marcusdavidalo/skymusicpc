@@ -1,3 +1,8 @@
 build
 dist
 venv
+.spec
+.pytest
+.pytest_cache
+__pycache__
+.json
