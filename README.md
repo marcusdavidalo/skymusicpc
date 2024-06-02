@@ -1,6 +1,6 @@
 # SkyMusic
 
-SkyMusic is a Python application for playing music by simulating keyboard inputs. It provides a graphical user interface for loading, saving, and playing music files in the SkySheet or JSON formats.
+SkyMusic is a Python application for playing music on Sky: Children of the Light
 
 ## Requirements
 
