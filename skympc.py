@@ -1,10 +1,8 @@
 import os
-import time
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog, messagebox
 import json
-import ast
 import chardet
 import threading
 import keyboard
@@ -78,9 +76,10 @@ def play_music(notes):
                 threading.Event().wait(delay)
 
 def play_loaded_music():
-    global loaded_notes
+    global loaded_notes, is_playing
     if loaded_notes is not None:
         play_music(loaded_notes)
+    is_playing = True
 
 def pause_music():
     global is_playing
@@ -111,16 +110,16 @@ def load_music_from_file():
     global loaded_notes
     results = []
     try:
-        file_types = [("SkySheet Files", "*.skysheet"), ("JSON Files", "*.json")]
+        file_types = [("SkySheet Files", "*.skysheet"), ("JSON Files", "*.json"), ("Text Files", "*.txt")]
         file_paths = filedialog.askopenfilenames(filetypes=file_types)
         if file_paths:
             for file_path in file_paths:
                 try:
                     encoding = detect_encoding(file_path)
                     with open(file_path, 'r', encoding=encoding) as file:
-                        data = ast.literal_eval(file.read())
+                        data = json.load(file)
                     
-                    if isinstance(data, list) and 'songNotes' in data[0] and isinstance(data[0]['songNotes'], list):
+                    if isinstance(data, list) and 'songNotes' in data[0] and isinstance(data[0]['songNotes'], list) and all('time' in note and 'key' in note for note in data[0]['songNotes']):
                         loaded_notes = data[0]['songNotes']
                         save_music_result = save_music(loaded_notes, file_path)
                         if save_music_result:
@@ -128,7 +127,7 @@ def load_music_from_file():
                         else:
                             results.append(f"File {file_path}: Save failed. A song with the same name is already saved.")
                     else:
-                        results.append(f"File {file_path}: Invalid SkySheet file. Missing or incorrect 'songNotes' key.")
+                        results.append(f"File {file_path}: Invalid SkySheet file. Missing or incorrect 'songNotes' key or 'time' and 'key' in 'songNotes'.")
                 except (UnicodeDecodeError, json.JSONDecodeError) as e:
                     results.append(f"File {file_path}: Failed to decode. Error: {str(e)}")
     except FileNotFoundError as e:
@@ -137,6 +136,7 @@ def load_music_from_file():
     # Show summary of results
     summary = "\n".join(results)
     messagebox.showinfo("Load Music Summary", summary)
+
 
 def save_music(notes, path):
     global saved_music
