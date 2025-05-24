@@ -6,14 +6,426 @@ import json
 import chardet
 import threading
 import keyboard
+import uuid
+import time as time_module
+import random
+
+# Localization system
+TRANSLATIONS = {
+    "en": {  # English (Default)
+        "app_title": "SkyMusic Player",
+        "app_subtitle": "Play your sky music with ease",
+        "sidebar_title": "SkyMusic Player",
+        "sidebar_subtitle": "SONG LIBRARY",
+        "search_placeholder": "Search songs...",
+        "no_songs_found": "No songs found",
+        "load_music": "Load Music",
+        "now_playing": "NOW PLAYING",
+        "no_song_loaded": "No song loaded",
+        "playback_settings": "PLAYBACK SETTINGS",
+        "auto_sustain_on": "Auto Sustain: On",
+        "auto_sustain_off": "Auto Sustain: Off",
+        "humanizer_on": "Humanizer: On",
+        "humanizer_off": "Humanizer: Off",
+        "queue_mode_on": "Queue Mode: On",
+        "queue_mode_off": "Queue Mode: Off",
+        "playback_speed": "Playback Speed",
+        "normal_speed": "Normal",
+        "slower": "% Slower",
+        "faster": "% Faster",
+        "note_delay": "Note Delay",
+        "seconds": "seconds",
+        "humanize_amount": "Humanize Amount",
+        "play_pause": "Play/Pause (F1)",
+        "stop": "Stop (F2)",
+        "queue_management": "QUEUE MANAGEMENT",
+        "previous": "◀ Previous",
+        "next": "Next ▶",
+        "clear_queue": "Clear Queue",
+        "queue_empty": "Queue is empty",
+        "keyboard_shortcuts": "KEYBOARD SHORTCUTS",
+        "play_pause_desc": "Play/Pause current song",
+        "stop_desc": "Stop playback",
+        "ms": "ms",
+        "legacy_format": "Legacy Format",
+        "load": "Load",
+        "add_queue": "+ Queue",
+        "delete": "Delete",
+        "welcome": "Welcome to SkyMusic Player! Press F1 to play/pause, F2 to stop. Queue system is enabled - add songs from your library to the queue.",
+        "status_playing": "▶ Playing",
+        "status_paused": "⏸ Paused",
+        "status_stopped": "⏹ Stopped",
+        "status_finished": "⏹ Finished",
+        "status_ready": "▶ Ready",
+        "status_no_song": "⏹ No song loaded",
+        "status_error": "⏹ Error: No notes",
+        "status_queue_finished": "⏹ Queue Finished",
+        "load_success": "Loaded: {name}",
+        "delete_success": "Deleted: {name}",
+        "queue_add_success": "Added song to queue",
+        "queue_remove_success": "Removed song from queue",
+        "queue_clear_success": "Queue cleared",
+        "queue_mode_enabled": "Queue mode enabled",
+        "queue_mode_disabled": "Queue mode disabled",
+        "auto_sustain_enabled": "Auto sustain enabled. Notes will be sustained automatically.",
+        "auto_sustain_disabled": "Auto sustain disabled. Use delay slider to control note duration.",
+        "humanizer_enabled": "Humanizer enabled - notes will have slight timing variations",
+        "humanizer_disabled": "Humanizer disabled",
+        "always_on_top_on": "Always on Top: On",
+        "always_on_top_off": "Always on Top: Off",
+        "always_on_top_enabled": "Always on Top enabled",
+        "always_on_top_disabled": "Always on Top disabled",
+        "language": "English"
+    },
+    "zh": {  # Chinese
+        "app_title": "天空音乐播放器",
+        "app_subtitle": "轻松播放您的天空音乐",
+        "sidebar_title": "天空音乐播放器",
+        "sidebar_subtitle": "音乐库",
+        "search_placeholder": "搜索歌曲...",
+        "no_songs_found": "未找到歌曲",
+        "load_music": "加载音乐",
+        "now_playing": "正在播放",
+        "no_song_loaded": "未加载歌曲",
+        "playback_settings": "播放设置",
+        "auto_sustain_on": "自动延音: 开",
+        "auto_sustain_off": "自动延音: 关",
+        "humanizer_on": "人性化演奏: 开",
+        "humanizer_off": "人性化演奏: 关",
+        "queue_mode_on": "队列模式: 开",
+        "queue_mode_off": "队列模式: 关",
+        "playback_speed": "播放速度",
+        "normal_speed": "正常",
+        "slower": "% 慢速",
+        "faster": "% 快速",
+        "note_delay": "音符间隔",
+        "seconds": "秒",
+        "humanize_amount": "人性化强度",
+        "play_pause": "播放/暂停 (F1)",
+        "stop": "停止 (F2)",
+        "queue_management": "队列管理",
+        "previous": "◀ 上一首",
+        "next": "下一首 ▶",
+        "clear_queue": "清空队列",
+        "queue_empty": "队列为空",
+        "keyboard_shortcuts": "键盘快捷键",
+        "play_pause_desc": "播放/暂停当前歌曲",
+        "stop_desc": "停止播放",
+        "ms": "毫秒",
+        "legacy_format": "旧格式",
+        "load": "加载",
+        "add_queue": "+ 队列",
+        "delete": "删除",
+        "welcome": "欢迎使用天空音乐播放器! 按F1播放/暂停, 按F2停止。",
+        "status_playing": "▶ 播放中",
+        "status_paused": "⏸ 已暂停",
+        "status_stopped": "⏹ 已停止",
+        "status_finished": "⏹ 已完成",
+        "status_ready": "▶ 就绪",
+        "status_no_song": "⏹ 未加载歌曲",
+        "status_error": "⏹ 错误: 无音符",
+        "status_queue_finished": "⏹ 队列已完成",
+        "load_success": "已加载: {name}",
+        "delete_success": "已删除: {name}",
+        "queue_add_success": "已添加歌曲到队列",
+        "queue_remove_success": "已从队列中移除歌曲",
+        "queue_clear_success": "已清空队列",
+        "queue_mode_enabled": "已启用队列模式",
+        "queue_mode_disabled": "已禁用队列模式",
+        "auto_sustain_enabled": "已启用自动延音。音符将自动延长。",
+        "auto_sustain_disabled": "已禁用自动延音。使用延迟滑块控制音符持续时间。",
+        "humanizer_enabled": "已启用人性化演奏 - 音符将有轻微的时间变化",
+        "humanizer_disabled": "已禁用人性化演奏",
+        "always_on_top_on": "置顶: 开",
+        "always_on_top_off": "置顶: 关",
+        "always_on_top_enabled": "已启用置顶",
+        "always_on_top_disabled": "已禁用置顶",
+        "language": "中文"
+    },
+    "es": {  # Spanish
+        "app_title": "SkyMusic Player",
+        "app_subtitle": "Reproduce tu música Sky con facilidad",
+        "sidebar_title": "SkyMusic Player",
+        "sidebar_subtitle": "BIBLIOTECA DE CANCIONES",
+        "search_placeholder": "Buscar canciones...",
+        "no_songs_found": "No se encontraron canciones",
+        "load_music": "Cargar Música",
+        "now_playing": "REPRODUCIENDO AHORA",
+        "no_song_loaded": "Ninguna canción cargada",
+        "playback_settings": "AJUSTES DE REPRODUCCIÓN",
+        "auto_sustain_on": "Auto-sostenido: Activado",
+        "auto_sustain_off": "Auto-sostenido: Desactivado",
+        "humanizer_on": "Humanizador: Activado",
+        "humanizer_off": "Humanizador: Desactivado",
+        "queue_mode_on": "Modo Cola: Activado",
+        "queue_mode_off": "Modo Cola: Desactivado",
+        "playback_speed": "Velocidad de Reproducción",
+        "normal_speed": "Normal",
+        "slower": "% Más lento",
+        "faster": "% Más rápido",
+        "note_delay": "Retardo de Nota",
+        "seconds": "segundos",
+        "humanize_amount": "Cantidad de Humanización",
+        "play_pause": "Reproducir/Pausar (F1)",
+        "stop": "Detener (F2)",
+        "queue_management": "GESTIÓN DE COLA",
+        "previous": "◀ Anterior",
+        "next": "Siguiente ▶",
+        "clear_queue": "Limpiar Cola",
+        "queue_empty": "La cola está vacía",
+        "keyboard_shortcuts": "ATAJOS DE TECLADO",
+        "play_pause_desc": "Reproducir/Pausar canción actual",
+        "stop_desc": "Detener reproducción",
+        "ms": "ms",
+        "legacy_format": "Formato Antiguo",
+        "load": "Cargar",
+        "add_queue": "+ Cola",
+        "delete": "Eliminar",
+        "welcome": "¡Bienvenido a SkyMusic Player! Presiona F1 para reproducir/pausar y F2 para detener.",
+        "status_playing": "▶ Reproduciendo",
+        "status_paused": "⏸ Pausado",
+        "status_stopped": "⏹ Detenido",
+        "status_finished": "⏹ Finalizado",
+        "status_ready": "▶ Listo",
+        "status_no_song": "⏹ Sin canción cargada",
+        "status_error": "⏹ Error: Sin notas",
+        "status_queue_finished": "⏹ Cola Finalizada",
+        "load_success": "Cargada: {name}",
+        "delete_success": "Eliminada: {name}",
+        "queue_add_success": "Canción añadida a la cola",
+        "queue_remove_success": "Canción eliminada de la cola",
+        "queue_clear_success": "Cola limpiada",
+        "queue_mode_enabled": "Modo cola activado",
+        "queue_mode_disabled": "Modo cola desactivado",
+        "auto_sustain_enabled": "Auto-sostenido activado. Las notas se sostendrán automáticamente.",
+        "auto_sustain_disabled": "Auto-sostenido desactivado. Usa el deslizador de retardo para controlar la duración de las notas.",
+        "humanizer_enabled": "Humanizador activado - las notas tendrán ligeras variaciones de tiempo",
+        "humanizer_disabled": "Humanizador desactivado",
+        "always_on_top_on": "Siempre visible: Activado",
+        "always_on_top_off": "Siempre visible: Desactivado",
+        "always_on_top_enabled": "Siempre visible activado",
+        "always_on_top_disabled": "Siempre visible desactivado",
+        "language": "Español"
+    },
+    "ja": {  # Japanese
+        "app_title": "スカイミュージックプレーヤー",
+        "app_subtitle": "簡単にスカイミュージックを再生",
+        "sidebar_title": "スカイミュージックプレーヤー",
+        "sidebar_subtitle": "曲ライブラリ",
+        "search_placeholder": "曲を検索...",
+        "no_songs_found": "曲が見つかりません",
+        "load_music": "音楽を読み込む",
+        "now_playing": "再生中",
+        "no_song_loaded": "曲が読み込まれていません",
+        "playback_settings": "再生設定",
+        "auto_sustain_on": "自動サステイン: オン",
+        "auto_sustain_off": "自動サステイン: オフ",
+        "humanizer_on": "ヒューマナイザー: オン",
+        "humanizer_off": "ヒューマナイザー: オフ",
+        "queue_mode_on": "キューモード: オン",
+        "queue_mode_off": "キューモード: オフ",
+        "playback_speed": "再生速度",
+        "normal_speed": "通常",
+        "slower": "% 遅く",
+        "faster": "% 速く",
+        "note_delay": "ノートディレイ",
+        "seconds": "秒",
+        "humanize_amount": "ヒューマナイズ量",
+        "play_pause": "再生/一時停止 (F1)",
+        "stop": "停止 (F2)",
+        "queue_management": "キュー管理",
+        "previous": "◀ 前へ",
+        "next": "次へ ▶",
+        "clear_queue": "キューをクリア",
+        "queue_empty": "キューは空です",
+        "keyboard_shortcuts": "キーボードショートカット",
+        "play_pause_desc": "現在の曲を再生/一時停止",
+        "stop_desc": "再生を停止",
+        "ms": "ミリ秒",
+        "legacy_format": "レガシーフォーマット",
+        "load": "読込",
+        "add_queue": "+ キュー",
+        "delete": "削除",
+        "welcome": "スカイミュージックプレーヤーへようこそ！F1で再生/一時停止、F2で停止します。",
+        "status_playing": "▶ 再生中",
+        "status_paused": "⏸ 一時停止中",
+        "status_stopped": "⏹ 停止しました",
+        "status_finished": "⏹ 終了しました",
+        "status_ready": "▶ 準備完了",
+        "status_no_song": "⏹ 曲が読み込まれていません",
+        "status_error": "⏹ エラー: ノートがありません",
+        "status_queue_finished": "⏹ キュー終了",
+        "load_success": "読み込みました: {name}",
+        "delete_success": "削除しました: {name}",
+        "queue_add_success": "曲をキューに追加しました",
+        "queue_remove_success": "曲をキューから削除しました",
+        "queue_clear_success": "キューをクリアしました",
+        "queue_mode_enabled": "キューモードを有効にしました",
+        "queue_mode_disabled": "キューモードを無効にしました",
+        "auto_sustain_enabled": "自動サステインを有効にしました。ノートは自動的に持続します。",
+        "auto_sustain_disabled": "自動サステインを無効にしました。ディレイスライダーでノートの長さを調整してください。",
+        "humanizer_enabled": "ヒューマナイザーを有効にしました - ノートにわずかな時間差が生じます",
+        "humanizer_disabled": "ヒューマナイザーを無効にしました",
+        "always_on_top_on": "常に手前に表示: オン",
+        "always_on_top_off": "常に手前に表示: オフ",
+        "always_on_top_enabled": "常に手前に表示を有効にしました",
+        "always_on_top_disabled": "常に手前に表示を無効にしました",
+        "language": "日本語"
+    }
+}
+
+# Default language
+current_language = "en"
+
+# Function to get translated text
+def _(key, **kwargs):
+    """Get translated text for the given key in the current language"""
+    if current_language in TRANSLATIONS and key in TRANSLATIONS[current_language]:
+        text = TRANSLATIONS[current_language][key]
+        # Format the text with the provided kwargs if any
+        if kwargs:
+            return text.format(**kwargs)
+        return text
+    # Fallback to English
+    if key in TRANSLATIONS["en"]:
+        text = TRANSLATIONS["en"][key]
+        if kwargs:
+            return text.format(**kwargs)
+        return text
+    # If key doesn't exist, return the key itself
+    return key
+
+# Function to switch language
+def switch_language(lang):
+    """Switch the application language and update all UI elements"""
+    global current_language
+    if lang in TRANSLATIONS:
+        current_language = lang
+        update_ui_language()
+        return True
+    return False
+
+# Define the update_ui_language function that updates all UI text when language changes
+def update_ui_language():
+    """Update all UI text elements to the current language"""
+    # Update window title
+    root.title(_("app_title"))
+    
+    # Update header
+    app_title.config(text=_("app_title"))
+    app_subtitle.config(text=_("app_subtitle"))
+    load_button.config(text=_("load_music"))
+    
+    # Update sidebar
+    sidebar_title.config(text=_("sidebar_title"))
+    sidebar_subtitle.config(text=_("sidebar_subtitle"))
+    
+    # Update search placeholder if it's the default
+    if search_entry.get() == "Search songs..." or search_entry.get() == "搜索歌曲...":
+        search_entry.delete(0, "end")
+        search_entry.insert(0, _("search_placeholder"))
+    
+    # Update Now Playing section
+    now_playing_title.config(text=_("now_playing"))
+    if current_song_label.cget("text") == "No song loaded" or current_song_label.cget("text") == "未加载歌曲":
+        current_song_label.config(text=_("no_song_loaded"))
+    
+    # Update playback controls
+    play_button.config(text=_("play_pause"))
+    stop_button.config(text=_("stop"))
+    
+    # Update settings section
+    settings_title.config(text=_("playback_settings"))
+    
+    # Update auto-sustain checkbox
+    if auto_sustain:
+        auto_sustain_checkbox.config(text=_("auto_sustain_on"))
+    else:
+        auto_sustain_checkbox.config(text=_("auto_sustain_off"))
+    
+    # Update humanizer checkbox
+    if humanizer_enabled:
+        humanizer_checkbox.config(text=_("humanizer_on"))
+    else:
+        humanizer_checkbox.config(text=_("humanizer_off"))
+    
+    # Update humanizer settings
+    humanizer_strength_label.config(text=_("humanize_amount"))
+    humanizer_strength_value.config(text=f"{humanizer_strength} {_('ms')}")
+    
+    # Update queue checkbox
+    if queue_enabled:
+        queue_checkbox.config(text=_("queue_mode_on"))
+    else:
+        queue_checkbox.config(text=_("queue_mode_off"))
+    
+    # Update always on top checkbox
+    if always_on_top:
+        always_on_top_checkbox.config(text=_("always_on_top_on"))
+    else:
+        always_on_top_checkbox.config(text=_("always_on_top_off"))
+
+    # Update speed settings
+    speed_label.config(text=_("playback_speed"))
+    update_speed_label(speed_slider.get())  # This will refresh the speed label text
+    
+    # Update delay settings
+    delay_title.config(text=_("note_delay"))
+    update_delay_label(delay_slider.get())  # This will refresh the delay label text
+    
+    # Update queue management section
+    if queue_enabled:
+        queue_title.config(text=_("queue_management"))
+        prev_queue_btn.config(text=_("previous"))
+        next_queue_btn.config(text=_("next"))
+        clear_queue_btn.config(text=_("clear_queue"))
+        update_queue_display()  # This will refresh all queue items
+    
+    # Update keyboard shortcuts section
+    keyboard_title.config(text=_("keyboard_shortcuts"))
+    f1_desc.config(text=_("play_pause_desc"))
+    f2_desc.config(text=_("stop_desc"))
+    
+    # Update sidebar items
+    update_sidebar()
+
+# Update the speed_label formatting function to use translations
+def update_speed_label(val):
+    val_float = float(val)
+    if val_float < -0.33:
+        # Slower
+        slowdown = int(abs(val_float) * 100)
+        label_text = f"{slowdown}{_('slower')}"
+    elif val_float > 0.33:
+        # Faster
+        speedup = int(val_float * 100)
+        label_text = f"{speedup}{_('faster')}"
+    else:
+        label_text = _("normal_speed")
+    speed_value_label.config(text=label_text)
+
+# Update the delay_label formatting function to use translations
+def update_delay_label(val):
+    val_float = float(val)
+    delay_value_label.config(text=f"{val_float:.2f} {_('seconds')}")
+    # Also update the global delay variable
+    global delay
+    delay = val_float
 
 SAVED_SONGS_FILE = "saved_songs.json"
 LAST_LOADED_SONG_FILE = "last_loaded_song.json"
 
 # Global variables
 delay = 0.030
-auto_delay = True
+auto_sustain = True
 speed = 0
+hotkey = "F1"
+humanizer_enabled = False
+humanizer_strength = 10  # Milliseconds of maximum random variation
+queue_enabled = True
+always_on_top = False # New global variable for always on top
+play_queue = []  # List to hold song IDs in the queue
+current_queue_index = -1  # Current position in the queue
 
 # Define the key mapping
 keyMapping = {
@@ -25,78 +437,337 @@ keyMapping = {
     "2Key10": "n", "2Key11": "m", "2Key12": ",", "2Key13": ".", "2Key14": "/"
 }
 
-
 saved_music = []
 is_playing = False
 current_note_index = 0
 play_event = threading.Event()
 stop_event = threading.Event()
-lock = threading.Lock()
+pause_event = threading.Event()
+player_thread = None
+
+# Minimalist Zinc Gray Color Palette
+COLOR_BG = "#27272A"  # Zinc 800 - Main background
+COLOR_SECONDARY_BG = "#3F3F46"  # Zinc 700 - Sidebar, cards, secondary elements
+COLOR_FG = "#FAFAFA"  # Zinc 50 - Primary text
+COLOR_ACCENT = "#A1A1AA"  # Zinc 400 - Accent for titles, active states, highlights
+COLOR_ACCENT_SECONDARY = "#71717A"  # Zinc 600 - Lighter accent for hover/pressed
+COLOR_HOVER = "#52525B"  # Zinc 600 - Hover effect for interactive elements
+COLOR_SUCCESS = "#4CAF50"  # Green for success
+COLOR_WARNING = "#FFC107"  # Amber for warnings
+COLOR_ERROR = "#F44336"  # Red for errors
+COLOR_BUTTON_BG = "#52525B"  # Zinc 600 - Button background
+COLOR_BUTTON_FG = "#FAFAFA"  # Zinc 50 - Button text
+COLOR_BORDER = "#3F3F46"  # Zinc 700 - Border color
+COLOR_CARD_BG = "#3F3F46"  # Zinc 700 - Card/panel background
+COLOR_INACTIVE = "#A1A1AA"  # Zinc 400 - Inactive element color
+
+# Function to release all keys
+def release_all_keys():
+    for key in "yuiop;hjkl,./nm":
+        keyboard.release(key)
+
+def toggle_play_pause():
+    global is_playing, player_thread
+    if not is_playing:
+        # Start playing
+        play_loaded_music()
+    else:
+        # Pause
+        pause_music()
+
+def stop_music_wrapper():
+    global is_playing, current_note_index, speed, player_thread
+    
+    # Prevent duplicate calls - return immediately if not playing
+    if not is_playing:
+        return
+    
+    # Set the stop event which will be checked by the player thread
+    stop_event.set()
+    # Wait briefly to ensure thread sees the event
+    time_module.sleep(0.1)
+    # Update UI
+    play_status_label.config(text=_("status_stopped"), foreground=COLOR_INACTIVE)
+    # Reset state
+    is_playing = False
+    current_note_index = 0
+    speed = 0
+    speed_slider.set(0)
+    # Release all pressed keys
+    release_all_keys()
+    
+    # If the thread is still running, join it with a timeout
+    if player_thread and player_thread.is_alive():
+        player_thread.join(0.5)
+    
+    # Reset events
+    stop_event.clear()
+    play_event.clear()
+    pause_event.clear()
+
+# Clear any existing hotkeys
+try:
+    # Try to remove individual hotkeys instead of all at once
+    try:
+        keyboard.remove_hotkey("F1")
+        print("F1 hotkey removed successfully.")
+    except:
+        pass
+    
+    try:
+        keyboard.remove_hotkey("F2")
+        print("F2 hotkey removed successfully.")
+    except:
+        pass
+except Exception as e:
+    print(f"Error removing hotkeys: {e}")
+
+# Add new hotkeys
+try:
+    keyboard.add_hotkey("F1", toggle_play_pause)
+    keyboard.add_hotkey("F2", stop_music_wrapper)
+    print("Hotkeys added successfully.")
+except Exception as e:
+    print(f"Error adding hotkeys: {e}")
+    messagebox.showwarning("Hotkey Warning", "Could not register keyboard shortcuts. You may still use the buttons.")
+
+def player_thread_func(notes):
+    global current_note_index, is_playing, speed
+    
+    # Safety check for empty notes
+    if not notes or len(notes) == 0:
+        print("No notes to play")
+        is_playing = False
+        root.after(0, lambda: play_status_label.config(text=_("status_error"), foreground=COLOR_ERROR))
+        return
+    
+    # Check if we're dealing with the old format (list of integers)
+    if isinstance(notes[0], int):
+        # Convert old format to new format
+        converted_notes = []
+        for i in range(0, len(notes), 2):
+            if i + 1 < len(notes):
+                key = f"1Key{notes[i] % 15}"
+                note_time = notes[i + 1] if notes[i + 1] >= 0 else -notes[i + 1]
+                converted_notes.append({"key": key, "time": note_time})
+        notes = converted_notes
+
+    time_threshold = 20  # Threshold in milliseconds for grouping notes
+    note_groups = []
+    current_group = []
+
+    # Group notes by their time, considering a time threshold for grouping
+    for note in notes:
+        note_time = note['time']
+        if not current_group or note_time - current_group[-1]['time'] <= time_threshold:
+            current_group.append(note)
+        else:
+            note_groups.append(current_group)
+            current_group = [note]
+    if current_group:
+        note_groups.append(current_group)
+
+    start_time = time_module.time()  # Record the start time
+    current_note_index = 0
+    paused_elapsed = 0  # Track elapsed time when paused
+
+    while current_note_index < len(note_groups):
+        # Check for stop request
+        if stop_event.is_set():
+            release_all_keys()
+            return
+        
+        # Check for pause
+        if pause_event.is_set():
+            if not paused_elapsed:
+                paused_elapsed = time_module.time() - start_time
+            time_module.sleep(0.1)  # Sleep while paused
+            continue
+        
+        # If we were paused and now resumed, adjust the start time
+        if paused_elapsed > 0:
+            start_time = time_module.time() - paused_elapsed
+            paused_elapsed = 0
+        
+        # Current note group
+        group = note_groups[current_note_index]
+        group_times = [note['time'] for note in group]
+        current_time = min(group_times) / 1000  # Convert to seconds
+        
+        # Get current speed - make sure to get it on each iteration
+        speed = speed_slider.get()
+        
+        # Calculate time adjustment based on speed
+        speed_factor = 1.0
+        if speed > 0:
+            # Faster: reduce the effective time (speeds up playback)
+            speed_factor = 1.0 - (speed * 0.5)  # At max speed (1.0), time is halved
+        elif speed < 0:
+            # Slower: increase the effective time (slows down playback)
+            speed_factor = 1.0 + (abs(speed) * 0.5)  # At min speed (-1.0), time is 1.5x
+        
+        # Apply speed factor to calculate how much time should have passed
+        adjusted_current_time = current_time * speed_factor
+        
+        # Calculate wait time based on adjusted time
+        elapsed_time = time_module.time() - start_time
+        wait_time = adjusted_current_time - elapsed_time
+
+        # Wait if needed
+        if wait_time > 0:
+            time_module.sleep(wait_time)
+        
+        # Check again for stop/pause after waiting
+        if stop_event.is_set():
+            release_all_keys()
+            return
+        if pause_event.is_set():
+            if not paused_elapsed:
+                paused_elapsed = time_module.time() - start_time
+            continue
+
+        # Press all keys for the current time group
+        keys_to_press = set(keyMapping.get(note['key']) for note in group if keyMapping.get(note['key']))
+        
+        # Apply humanizer if enabled - press keys with slight random timing differences
+        if humanizer_enabled and len(keys_to_press) > 1:
+            # Convert to list to maintain order for consistent randomization
+            keys_list = list(keys_to_press)
+            
+            # Randomize the order slightly for more human-like playing
+            if random.random() < 0.3:  # 30% chance to change order
+                random.shuffle(keys_list)
+            
+            # Press each key with a small random delay
+            for key in keys_list:
+                keyboard.press(key)
+                if len(keys_list) > 1:  # Only add delay if there are multiple keys
+                    # Random delay between key presses (0-X ms based on humanizer strength)
+                    random_delay = random.uniform(0, humanizer_strength / 1000.0)
+                    time_module.sleep(random_delay)
+        else:
+            # Standard key press (all at once)
+            for key in keys_to_press:
+                keyboard.press(key)
+
+        # Calculate the delay for the next group of notes
+        if current_note_index < len(note_groups) - 1:
+            next_group = note_groups[current_note_index + 1]
+            next_times = [note['time'] for note in next_group]
+            next_time = min(next_times) / 1000
+            note_delay = next_time - current_time
+        else:
+            note_delay = delay_slider.get()
+
+        # Apply speed adjustment to the delay
+        note_delay = note_delay * speed_factor
+        
+        # Adjust for auto-sustain
+        if auto_sustain:
+            # Hold the notes slightly less than the full delay
+            sustain_time = max(0.02, note_delay - 0.01)  # At least 20ms, with 10ms gap
+            time_module.sleep(sustain_time)
+        else:
+            # Use the manual delay setting
+            manual_delay = delay_slider.get()
+            time_module.sleep(manual_delay)
+        
+        # Check for stop/pause after delay
+        if stop_event.is_set():
+            release_all_keys()
+            return
+        
+        # Release keys with humanized timing if enabled
+        if humanizer_enabled and len(keys_to_press) > 1:
+            # Convert to list to maintain order
+            keys_list = list(keys_to_press)
+            
+            # Randomize the release order slightly for more human-like playing
+            if random.random() < 0.4:  # 40% chance to change release order
+                random.shuffle(keys_list)
+            
+            # Release each key with a small random delay
+            for key in keys_list:
+                keyboard.release(key)
+                if len(keys_list) > 1:  # Only add delay if there are multiple keys
+                    # Random delay between key releases (0-X ms based on humanizer strength)
+                    random_delay = random.uniform(0, humanizer_strength / 1000.0)
+                    time_module.sleep(random_delay)
+        else:
+            # Standard key release (all at once)
+            for key in keys_to_press:
+                keyboard.release(key)
+
+        # Move to the next group
+        current_note_index += 1
+        
+    # After all notes are played
+    is_playing = False
+    
+    # Check if we should play the next song in queue
+    if queue_enabled and current_queue_index < len(play_queue) - 1:
+        # Schedule the next song to play after a short delay
+        # Avoid triggering immediate UI updates that could cause refresh loops
+        root.after(500, play_next_in_queue)
+    else:
+        if queue_enabled and len(play_queue) > 0:
+            # Show a status message to indicate queue has finished
+            root.after(100, lambda: play_status_label.config(text=_("status_queue_finished"), foreground=COLOR_INACTIVE))
+        else:
+            # Update UI to show finished state - use root.after to avoid refresh loops
+            root.after(100, lambda: play_status_label.config(text=_("status_finished"), foreground=COLOR_INACTIVE))
 
 def play_music(notes):
-    global current_note_index, speed  # Add speed to the global variables
+    global current_note_index, is_playing, player_thread
+    
+    # Stop any existing playback
+    if is_playing:
+        stop_music_wrapper()
+    
+    # Reset state
+    is_playing = True
     play_event.set()
     stop_event.clear()
-
-    while current_note_index < len(notes):
-        speed = speed_slider.get() * 0.035
-        if stop_event.is_set():
-            break
-
-        current_time = notes[current_note_index]['time']
-        keys_to_press = []
-
-        while current_note_index < len(notes) and abs(notes[current_note_index]['time'] - current_time) <= 10:
-            key = notes[current_note_index]['key']
-            mapped_key = keyMapping.get(key)
-            if mapped_key:
-                keys_to_press.append(mapped_key)
-            current_note_index += 1
-
-        for key in keys_to_press:
-            keyboard.press(key)
-        
-        if auto_delay and current_note_index < len(notes):
-            next_time = notes[current_note_index]['time']
-            calculated_delay = max(0, ((next_time - current_time) / 1000) + -speed)
-            threading.Event().wait(calculated_delay)
-        else:
-            threading.Event().wait(delay_slider.get())
-
-        if current_note_index == len(notes):
-            threading.Event().wait(1)
-
-        for key in keys_to_press:
-            keyboard.release(key)
-
-        if not auto_delay and current_note_index < len(notes):
-            next_time = notes[current_note_index]['time']
-            delay = max(0, ((next_time - current_time) / 1000 - delay_slider.get()) + -speed)
-            if delay > 0:
-                threading.Event().wait(delay)
+    pause_event.clear()
+    
+    # Start a new thread for playback
+    player_thread = threading.Thread(target=player_thread_func, args=(notes,))
+    player_thread.daemon = True
+    player_thread.start()
 
 def play_loaded_music():
     global loaded_notes, is_playing
     if loaded_notes is not None:
         play_music(loaded_notes)
-    is_playing = True
+        # Update the status text
+        play_status_label.config(text=_("status_playing"), foreground=COLOR_SUCCESS)
+        is_playing = True
+    else:
+        # No song loaded - show an error message
+        play_status_label.config(text=_("status_no_song"), foreground=COLOR_ERROR)
+        show_status_message(_("no_song_loaded"), "error")
 
 def pause_music():
     global is_playing
-    if play_event.is_set():
-        stop_event.set()
-        is_playing = False
+    if is_playing:
+        if pause_event.is_set():
+            # Resume
+            pause_event.clear()
+            play_status_label.config(text=_("status_playing"), foreground=COLOR_SUCCESS)
+        else:
+            # Pause
+            pause_event.set()
+            play_status_label.config(text=_("status_paused"), foreground=COLOR_WARNING)
+            # Release all keys when pausing
+            release_all_keys()
 
 def stop_music():
     global is_playing, current_note_index, speed
-    if play_event.is_set():
-        stop_event.set()
-    is_playing = False
-    current_note_index = 0
-    speed = 0
+    # Use the wrapper function
+    stop_music_wrapper()
 
-keyboard.add_hotkey("F1", play_loaded_music)
-keyboard.add_hotkey("F2", stop_music)
+def play_or_pause_music():
+    toggle_play_pause()
 
 loaded_notes = None
 
@@ -107,8 +778,10 @@ def detect_encoding(file_path):
         return result['encoding']
 
 def load_music_from_file():
-    global loaded_notes
-    results = []
+    global loaded_notes, saved_music
+    success_count = 0
+    failure_count = 0
+    
     try:
         file_types = [("SkySheet Files", "*.skysheet"), ("JSON Files", "*.json"), ("Text Files", "*.txt")]
         file_paths = filedialog.askopenfilenames(filetypes=file_types)
@@ -119,42 +792,82 @@ def load_music_from_file():
                     with open(file_path, 'r', encoding=encoding) as file:
                         data = json.load(file)
                     
-                    if isinstance(data, list) and 'songNotes' in data[0] and isinstance(data[0]['songNotes'], list) and all('time' in note and 'key' in note for note in data[0]['songNotes']):
-                        loaded_notes = data[0]['songNotes']
-                        save_music_result = save_music(loaded_notes, file_path)
-                        if save_music_result:
-                            results.append(f"File {file_path}: Saved successfully.")
+                    if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+                        song_data = data[0]
+                        if 'songNotes' in song_data:
+                            loaded_notes = song_data['songNotes']
+                            
+                            # Generate an ID if it doesn't exist
+                            if 'id' not in song_data:
+                                song_data['id'] = str(uuid.uuid4())
+                            
+                            # Use 'name' if it exists, otherwise use the filename
+                            song_name = song_data.get('name', os.path.basename(file_path))
+                            song_data['name'] = song_name
+
+                            # Check if it's the old format and convert if necessary
+                            if isinstance(loaded_notes[0], int):
+                                song_data['oldFormat'] = True
+                            else:
+                                song_data['oldFormat'] = False
+
+                            save_music_result = save_music(song_data, file_path)
+                            if save_music_result:
+                                # Explicitly set last loaded song
+                                load_music(song_data)
+                                # Reload saved songs and update sidebar
+                                load_saved_songs()
+                                success_count += 1
+                            else:
+                                failure_count += 1
+                                show_status_message(f"Song '{song_name}' already exists in library", "warning")
                         else:
-                            results.append(f"File {file_path}: Save failed. A song with the same name is already saved.")
+                            failure_count += 1
+                            show_status_message(f"Invalid SkySheet file: Missing notes data", "error")
                     else:
-                        results.append(f"File {file_path}: Invalid SkySheet file. Missing or incorrect 'songNotes' key or 'time' and 'key' in 'songNotes'.")
+                        failure_count += 1
+                        show_status_message(f"Invalid SkySheet file format", "error")
                 except (UnicodeDecodeError, json.JSONDecodeError) as e:
-                    results.append(f"File {file_path}: Failed to decode. Error: {str(e)}")
+                    failure_count += 1
+                    show_status_message(f"Failed to decode file: {str(e)[:50]}...", "error")
     except FileNotFoundError as e:
-        results.append(f"Error loading music: {str(e)}")
+        show_status_message(f"Error loading music: {str(e)}", "error")
     
-    # Show summary of results
-    summary = "\n".join(results)
-    messagebox.showinfo("Load Music Summary", summary)
+    # Show a summary notification if multiple files were loaded
+    if success_count > 0 and failure_count > 0:
+        show_status_message(f"Loaded {success_count} songs, {failure_count} failed", "info")
+    elif success_count > 1:
+        show_status_message(f"Successfully loaded {success_count} songs", "success")
+    # For single file success, the load_music function already shows a notification
 
+def save_music(song_data, file_path):
+    global loaded_notes
+    if os.path.exists(SAVED_SONGS_FILE):
+        with open(SAVED_SONGS_FILE, "r") as file:
+            saved_songs = json.load(file)
+    else:
+        saved_songs = []
 
-def save_music(notes, path):
-    global saved_music
-    name = os.path.basename(path)
-    for music in saved_music:
-        if music["name"] == name:
-            return False  # Indicate that saving failed due to duplicate name
-    
-    saved_music.append({"notes": notes, "name": name})
-    update_sidebar(saved_music)
-    
-    # Save the music data to files
-    with open(SAVED_SONGS_FILE, 'w') as f:
-        json.dump(saved_music, f)
-    with open(LAST_LOADED_SONG_FILE, 'w') as f:
-        json.dump({"notes": notes, "name": name}, f)
-    
-    return True  # Indicate that saving was successful
+    # Check for duplicate song name or ID
+    for song in saved_songs:
+        if song["name"] == song_data["name"] or song["id"] == song_data["id"]:
+            return False  # Song already exists
+
+    saved_songs.append(song_data)
+
+    with open(SAVED_SONGS_FILE, "w") as file:
+        json.dump(saved_songs, file, indent=4)
+
+    # Save the last loaded song to a separate file
+    last_loaded_song = {
+        "name": song_data["name"],
+        "id": song_data["id"],
+        "file_path": file_path
+    }
+    with open(LAST_LOADED_SONG_FILE, "w") as file:
+        json.dump(last_loaded_song, file, indent=4)
+
+    return True
     
 def load_saved_songs():
     if os.path.exists(SAVED_SONGS_FILE):
@@ -164,140 +877,917 @@ def load_saved_songs():
             update_sidebar(saved_music)
 
 def show_error_message(message):
-    messagebox.showerror("Error", message)
+    error_window = tk.Toplevel(root)
+    error_window.title("Error")
+    error_window.configure(bg=COLOR_BG)
+    error_window.grab_set()  # Make the window modal
+    
+    # Center the error window on the main window
+    window_width = 300
+    window_height = 150
+    position_x = root.winfo_x() + (root.winfo_width() // 2) - (window_width // 2)
+    position_y = root.winfo_y() + (root.winfo_height() // 2) - (window_height // 2)
+    error_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
+    
+    frame = ttk.Frame(error_window, style="Dialog.TFrame")
+    frame.pack(fill="both", expand=True, padx=15, pady=15)
+    
+    error_label = ttk.Label(frame, text=message, style="Dialog.TLabel", wraplength=250)
+    error_label.pack(pady=(0, 20))
+    
+    ok_button = ttk.Button(frame, text="OK", command=error_window.destroy, style="Accent.TButton", width=10)
+    ok_button.pack()
 
 def load_music(notes):
-    global loaded_notes
-    loaded_notes = notes
+    global loaded_notes, current_loaded_song_id
+    loaded_notes = notes['songNotes']
+    
+    # Check if we're loading the same song - no need to update UI
+    same_song = current_loaded_song_id == notes.get('id', '')
+    
+    # Store the current song ID for highlighting in sidebar
+    current_loaded_song_id = notes.get('id', '')
+    
     with open(LAST_LOADED_SONG_FILE, 'w') as f:
-        json.dump({"notes": notes}, f)
+        json.dump(notes, f)
+    
+    # Update the current song display
+    current_song_label.config(text=f"{notes.get('name', 'Unnamed Song')}")
+    
+    # Reset play status
+    play_status_label.config(text=_("status_ready"), foreground=COLOR_INACTIVE)
+    
+    # Show status message
+    show_status_message(_("load_success", name=notes.get('name', 'Unnamed Song')), "success")
+    
+    # Only update sidebar if we're loading a different song
+    if not same_song:
+        update_sidebar()
 
 def load_last_song():
     if os.path.exists(LAST_LOADED_SONG_FILE):
         with open(LAST_LOADED_SONG_FILE, 'r') as f:
             music = json.load(f)
-            load_music(music["notes"])
-
-def load_sidebar_music(index):
-    if index < len(saved_music):
-        music = saved_music[index]
-        load_music(music["notes"])
+            load_music(music)
 
 def delete_music(index):
+    global saved_music
     if index < len(saved_music):
+        song_name = saved_music[index].get("name", "Unnamed Song")
         del saved_music[index]
-        update_sidebar(saved_music)
+        with open(SAVED_SONGS_FILE, 'w') as f:
+            json.dump(saved_music, f)
+        update_sidebar()
+        show_status_message(f"Deleted: {song_name}", "warning")
 
-ui_theme = {"bg": "#222222", "fg": "white", "button_bg": "#444444", "button_fg": "white"}
-current_theme = ui_theme
+def load_specific_sidebar_music(frame):
+    song = getattr(frame, "song", None)
+    if song:
+        load_music(song)
 
-def update_sidebar(notes=None):
-    for widget in sidebar_inner_frame.winfo_children():
+def add_to_queue_from_sidebar(frame):
+    song = getattr(frame, "song", None)
+    if song:
+        song_id = song.get('id', '')
+        if song_id:
+            add_to_queue(song_id)
+
+def delete_specific_sidebar_music(frame):
+    song = getattr(frame, "song", None)
+    if song:
+        song_id = song.get('id', '')
+        if song_id:
+            delete_song_by_id(song_id)
+
+def search_songs(event=None):
+    # Reset the canvas scroll position to the top when searching
+    canvas.yview_moveto(0)
+    # The actual filtering is now done in the update_sidebar function
+    update_sidebar()
+
+def load_sidebar_music(index, current_songs=None):
+    songs_to_use = current_songs if current_songs is not None else saved_music
+    if index < len(songs_to_use):
+        music = songs_to_use[index]
+        load_music(music)
+
+def toggle_auto_sustain(state):
+    global auto_sustain
+    auto_sustain = state
+    
+    # Update UI based on auto_sustain state
+    if auto_sustain:
+        delay_frame.grid_forget()
+        auto_sustain_checkbox.configure(text=_("auto_sustain_on"))
+    else:
+        delay_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=5)
+        auto_sustain_checkbox.configure(text=_("auto_sustain_off"))
+    
+    # Update status message
+    if auto_sustain:
+        show_status_message(_("auto_sustain_enabled"), "info")
+    else:
+        show_status_message(_("auto_sustain_disabled"), "info")
+
+def show_status_message(message, message_type="info"):
+    """Display a status message in the status bar with appropriate styling"""
+    status_label.config(text=message)
+    if message_type == "success":
+        status_frame.configure(style="Success.TFrame")
+        status_label.configure(style="Success.TLabel")
+    elif message_type == "error":
+        status_frame.configure(style="Error.TFrame")
+        status_label.configure(style="Error.TLabel")
+    elif message_type == "warning":
+        status_frame.configure(style="Warning.TFrame")
+        status_label.configure(style="Warning.TLabel")
+    else:
+        status_frame.configure(style="Status.TFrame")
+        status_label.configure(style="Status.TLabel")
+    
+    # Make the status message visible
+    status_frame.pack(fill="x", padx=30, pady=(0, 10))
+    
+    # Determine display duration based on message type and content
+    display_time = 3000  # Default: 3 seconds
+    
+    # Longer display time for errors and warnings
+    if message_type == "error" or message_type == "warning":
+        display_time = 5000  # 5 seconds
+    
+    # Even longer for loading-related messages (they typically show file info)
+    if "loaded" in message.lower() or "failed" in message.lower() or "invalid" in message.lower():
+        display_time = 6000  # 6 seconds
+    
+    # Schedule the message to disappear
+    root.after(display_time, lambda: status_frame.pack_forget())
+
+def play_next_in_queue():
+    """Play the next song in the queue"""
+    global current_queue_index, play_queue
+    
+    if not queue_enabled or not play_queue:
+        return
+    
+    # Move to the next song in queue
+    current_queue_index += 1
+    
+    # Check if we've reached the end of the queue
+    if current_queue_index >= len(play_queue):
+        current_queue_index = len(play_queue) - 1
+        play_status_label.config(text=_("status_queue_finished"), foreground=COLOR_INACTIVE)
+        return
+    
+    # Get the song ID of the next song in queue
+    song_id = play_queue[current_queue_index]
+    
+    # Find the song in the saved_music list
+    for song in saved_music:
+        if song.get('id', '') == song_id:
+            # Load and play the song
+            load_music(song)
+            play_loaded_music()
+            # Update queue display
+            update_queue_display()
+            return
+    
+    # If we get here, the song was not found
+    show_status_message(f"Song ID {song_id} not found in library", "error")
+
+def play_previous_in_queue():
+    """Play the previous song in the queue"""
+    global current_queue_index, play_queue
+    
+    if not queue_enabled or not play_queue:
+        return
+    
+    # Move to the previous song in queue
+    current_queue_index -= 1
+    
+    # Check if we've reached the beginning of the queue
+    if current_queue_index < 0:
+        current_queue_index = 0
+        show_status_message("Already at the beginning of the queue", "info")
+        return
+    
+    # Get the song ID of the previous song in queue
+    song_id = play_queue[current_queue_index]
+    
+    # Find the song in the saved_music list
+    for song in saved_music:
+        if song.get('id', '') == song_id:
+            # Load and play the song
+            load_music(song)
+            play_loaded_music()
+            # Update queue display
+            update_queue_display()
+            return
+    
+    # If we get here, the song was not found
+    show_status_message(f"Song ID {song_id} not found in library", "error")
+
+def add_to_queue(song_id):
+    """Add a song to the queue"""
+    global play_queue
+    
+    # Check if the song exists in the library
+    song_exists = False
+    song_name = "Unknown Song"
+    for song in saved_music:
+        if song.get('id', '') == song_id:
+            song_exists = True
+            song_name = song.get("name", "Unknown Song")
+            break
+    
+    if not song_exists:
+        show_status_message("Cannot add song to queue - song not found", "error")
+        return False
+    
+    # Add the song to the queue
+    play_queue.append(song_id)
+    
+    # Update the queue display
+    update_queue_display()
+    show_status_message(f"Added to queue: {song_name}", "success")
+    return True
+
+def remove_from_queue(index):
+    """Remove a song from the queue"""
+    global play_queue, current_queue_index
+    
+    if index < 0 or index >= len(play_queue):
+        show_status_message("Invalid queue index", "error")
+        return False
+    
+    # Remove the song from the queue
+    removed_id = play_queue.pop(index)
+    
+    # Adjust the current index if needed
+    if current_queue_index >= index:
+        current_queue_index = max(0, current_queue_index - 1)
+    
+    # Update the queue display
+    update_queue_display()
+    show_status_message(_("queue_remove_success"), "info")
+    return True
+
+def clear_queue():
+    """Clear the entire queue"""
+    global play_queue, current_queue_index
+    
+    # Clear the queue
+    play_queue = []
+    current_queue_index = -1
+    
+    # Update the queue display
+    update_queue_display()
+    show_status_message(_("queue_clear_success"), "info")
+
+def toggle_queue():
+    """Toggle queue mode on/off"""
+    global queue_enabled
+    queue_enabled = not queue_enabled
+    
+    # Update UI
+    queue_var.set(queue_enabled)
+    if queue_enabled:
+        queue_checkbox.configure(text=_("queue_mode_on"))
+        show_status_message(_("queue_mode_enabled"), "success")
+    else:
+        queue_checkbox.configure(text=_("queue_mode_off"))
+        show_status_message(_("queue_mode_disabled"), "info")
+    
+    # Update the queue display
+    update_queue_display()
+
+def update_queue_display():
+    """Update the queue list display"""
+    # Clear existing items in the queue display
+    for widget in queue_list_frame.winfo_children():
         widget.destroy()
+    
+    if not play_queue:
+        # No songs in queue
+        empty_label = ttk.Label(queue_list_frame, text=_("queue_empty"), style="TLabel", foreground=COLOR_INACTIVE)
+        empty_label.pack(pady=10, padx=10)
+        return
+    
+    # Add a heading to show which song is next
+    if current_queue_index < len(play_queue) - 1:
+        next_song_id = play_queue[current_queue_index + 1]
+        next_song_name = "Unknown Song"
+        for song in saved_music:
+            if song.get('id', '') == next_song_id:
+                next_song_name = song.get('name', "Unknown Song")
+                break
+        
+        next_song_heading = ttk.Label(queue_list_frame, text=f"Next: {next_song_name}", 
+                                    style="TLabel", foreground=COLOR_SUCCESS, font=('Segoe UI', 9, 'bold'))
+        next_song_heading.pack(fill="x", pady=(0, 10), padx=5)
+    
+    # Add each song in the queue to the display
+    for i, song_id in enumerate(play_queue):
+        # Find the song in the saved_music list
+        song_name = "Unknown Song"
+        for song in saved_music:
+            if song.get('id', '') == song_id:
+                song_name = song.get('name', f"Song {i+1}")
+                break
+        
+        # Create a frame for each queue item
+        item_frame = ttk.Frame(queue_list_frame, style="Card.TFrame")
+        item_frame.pack(fill="x", padx=5, pady=2)
+        
+        # Indicate if this is the current song
+        prefix = "▶ " if i == current_queue_index else f"{i+1}. "
+        color = COLOR_SUCCESS if i == current_queue_index else COLOR_FG
+        
+        # Create a container for the song info
+        info_frame = ttk.Frame(item_frame, style="Card.TFrame")
+        info_frame.pack(side="left", fill="x", expand=True, padx=5, pady=5)
+        
+        # Display the song name
+        song_label = ttk.Label(info_frame, text=prefix + song_name, style="TLabel", foreground=color)
+        song_label.pack(side="left")
+        
+        # Add buttons container on the right
+        buttons_frame = ttk.Frame(item_frame, style="Card.TFrame")
+        buttons_frame.pack(side="right", padx=5, pady=5)
+        
+        # Add up/down buttons
+        if i > 0:
+            up_btn = ttk.Button(buttons_frame, text="▲", width=2, 
+                              command=lambda idx=i: move_up_in_queue(idx),
+                              style="TButton")
+            up_btn.pack(side="left", padx=2)
+        
+        if i < len(play_queue) - 1:
+            down_btn = ttk.Button(buttons_frame, text="▼", width=2, 
+                                command=lambda idx=i: move_down_in_queue(idx),
+                                style="TButton")
+            down_btn.pack(side="left", padx=2)
+        
+        # Add a remove button
+        remove_btn = ttk.Button(buttons_frame, text="✕", width=2, 
+                              command=lambda idx=i: remove_from_queue(idx),
+                              style="Error.TButton")
+        remove_btn.pack(side="left", padx=2)
 
-    if notes is None:
-        notes = saved_music
-    if not notes:
-        label = tk.Label(sidebar_inner_frame, text="No Songs Saved", fg=current_theme["fg"], bg=current_theme["bg"])
-        label.pack(expand=True, fill='both')
+def toggle_humanizer():
+    """Toggle humanizer mode on/off"""
+    global humanizer_enabled
+    humanizer_enabled = not humanizer_enabled
+    
+    # Update UI
+    humanizer_var.set(humanizer_enabled)
+    if humanizer_enabled:
+        humanizer_checkbox.configure(text=_("humanizer_on"))
+        humanizer_strength_frame.pack(fill="x", padx=10, pady=(5, 10))
+        show_status_message(_("humanizer_enabled"), "success")
     else:
-        for i, music in enumerate(notes):
-            frame = tk.Frame(sidebar_inner_frame, bg=current_theme["bg"])
-            frame.pack(fill='x')
-            load_button = tk.Button(frame, text="Load", command=lambda i=i: load_sidebar_music(i), bg=current_theme["button_bg"], fg=current_theme["button_fg"])
-            load_button.pack(side='left', padx=2, pady=2)
-            delete_button = tk.Button(frame, text="Delete", command=lambda i=i: delete_music(i), bg=current_theme["button_bg"], fg=current_theme["button_fg"])
-            delete_button.pack(side='left', padx=2, pady=2)
-            label = tk.Label(frame, text=music["name"], fg=current_theme["fg"], bg=current_theme["bg"], anchor='w')
-            label.pack(side='left', fill='x', expand=True)
+        humanizer_checkbox.configure(text=_("humanizer_off"))
+        humanizer_strength_frame.pack_forget()
+        show_status_message(_("humanizer_disabled"), "info")
 
-    # Update scrollbar
-    canvas.update_idletasks()
-    canvas.config(scrollregion=canvas.bbox("all"))
+def update_humanizer_strength(val):
+    """Update the humanizer strength value"""
+    global humanizer_strength
+    strength = int(float(val))
+    humanizer_strength = strength
+    humanizer_strength_value.config(text=f"{strength} {_('ms')}")
 
-def on_configure(event):
-    canvas.configure(scrollregion=canvas.bbox("all"))
-
-def show_error_message(message):
-    error_window = tk.Toplevel(root)
-    error_window.title("Error")
-    error_label = tk.Label(error_window, text=message, fg=current_theme["fg"], bg=current_theme["bg"])
-    error_label.pack(padx=10, pady=10)
-    ok_button = tk.Button(error_window, text="OK", command=error_window.destroy, bg=current_theme["button_bg"], fg=current_theme["button_fg"])
-    ok_button.pack()
-
-def toggle_auto_delay(state):
-    global auto_delay
-    auto_delay = state
-    if auto_delay:
-        delay_slider.grid_forget()
-        auto_delay_checkbox.grid(row=1, column=0, pady=10, padx=10, sticky="ew")
+def toggle_always_on_top():
+    """Toggle always on top mode for the main window"""
+    global always_on_top
+    always_on_top = not always_on_top
+    root.wm_attributes("-topmost", always_on_top)
+    
+    # Update UI
+    always_on_top_var.set(always_on_top)
+    if always_on_top:
+        always_on_top_checkbox.configure(text=_("always_on_top_on"))
+        show_status_message(_("always_on_top_enabled"), "success")
     else:
-        delay_slider.grid(row=2, column=0, pady=10, padx=10, sticky="ew")
+        always_on_top_checkbox.configure(text=_("always_on_top_off"))
+        show_status_message(_("always_on_top_disabled"), "info")
 
+# UI setup
 root = tk.Tk()
-root.title("SkyMusic")
-root.config(bg=current_theme["bg"])
+root.title("SkyMusic Player")
+root.config(bg=COLOR_BG)
+root.geometry("800x600") # Set a larger default window size
+root.resizable(True, True) # Make window resizable
 
-icon_data = '''
-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
-'''
+# Use the ei.ico file directly instead of base64 encoded icon
+icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ei.ico")
+if os.path.exists(icon_path):
+    root.iconbitmap(icon_path)
+else:
+    print("Warning: Icon file 'ei.ico' not found.")
 
-# Convert the Base64-encoded string to bytes and create a temporary icon file
-icon_file = tk.PhotoImage(data=icon_data)
-root.tk.call('wm', 'iconphoto', root._w, icon_file)
+icon_data = ''
 
-# Create main frames
-sidebar_frame = tk.Frame(root, bg=current_theme["bg"])
-main_frame = tk.Frame(root, bg=current_theme["bg"])
+# Configure ttk styles for a modern, sleek dark enterprise look
+style = ttk.Style()
+style.theme_use('clam')
+
+# Base styles
+style.configure("TFrame", background=COLOR_BG)
+style.configure("TButton", background=COLOR_BUTTON_BG, foreground=COLOR_BUTTON_FG, 
+                padding=(8, 4), font=('Segoe UI', 9), relief="flat", borderwidth=0)
+style.map("TButton", 
+          background=[('active', COLOR_HOVER), ('pressed', COLOR_ACCENT)],
+          foreground=[('pressed', COLOR_BUTTON_FG)])
+style.configure("TLabel", background=COLOR_BG, foreground=COLOR_FG, 
+                padding=2, font=('Segoe UI', 9))
+style.configure("TEntry", fieldbackground=COLOR_SECONDARY_BG, foreground=COLOR_FG, 
+                padding=4, font=('Segoe UI', 9), borderwidth=0, relief="flat")
+style.map("TEntry", 
+          fieldbackground=[('focus', COLOR_SECONDARY_BG)],
+          bordercolor=[('focus', COLOR_ACCENT)])
+style.configure("Vertical.TScrollbar", background=COLOR_SECONDARY_BG, 
+                troughcolor=COLOR_BG, bordercolor=COLOR_SECONDARY_BG, 
+                arrowcolor=COLOR_FG, relief="flat", borderwidth=0)
+style.map("Vertical.TScrollbar", 
+          background=[('active', COLOR_ACCENT), ('pressed', COLOR_ACCENT_SECONDARY)])
+style.configure("TCheckbutton", background=COLOR_BG, foreground=COLOR_FG, 
+                font=('Segoe UI', 9))
+style.map("TCheckbutton", 
+          background=[('active', COLOR_BG)],
+          indicatorcolor=[('selected', COLOR_ACCENT)])
+style.configure("Horizontal.TScale", background=COLOR_BG, troughcolor=COLOR_SECONDARY_BG, 
+                sliderlength=16, sliderthickness=10, borderwidth=0)
+style.map("Horizontal.TScale", 
+          background=[('active', COLOR_ACCENT)],
+          troughcolor=[('active', COLOR_SECONDARY_BG)])
+
+# Specialized button styles
+style.configure("Accent.TButton", background=COLOR_ACCENT, foreground=COLOR_BUTTON_FG)
+style.map("Accent.TButton", 
+          background=[('active', COLOR_ACCENT_SECONDARY), ('pressed', COLOR_ACCENT)])
+style.configure("Success.TButton", background=COLOR_SUCCESS, foreground=COLOR_BUTTON_FG)
+style.map("Success.TButton", 
+          background=[('active', "#35E073"), ('pressed', COLOR_SUCCESS)])
+style.configure("Warning.TButton", background=COLOR_WARNING, foreground="#000000")
+style.map("Warning.TButton", 
+          background=[('active', "#FFE345"), ('pressed', COLOR_WARNING)])
+style.configure("Error.TButton", background=COLOR_ERROR, foreground=COLOR_BUTTON_FG)
+style.map("Error.TButton", 
+          background=[('active', "#FF4D6B"), ('pressed', COLOR_ERROR)])
+
+# Sidebar-specific styles
+style.configure("Sidebar.TFrame", background=COLOR_SECONDARY_BG)
+style.configure("Sidebar.TButton", background=COLOR_SECONDARY_BG, foreground=COLOR_FG, 
+                padding=8, font=('Segoe UI', 9))
+style.map("Sidebar.TButton", 
+          background=[('active', COLOR_HOVER), ('pressed', COLOR_ACCENT)])
+style.configure("Sidebar.TLabel", background=COLOR_SECONDARY_BG, foreground=COLOR_FG, 
+                padding=5, font=('Segoe UI', 9))
+
+# Selected item in sidebar
+style.configure("Selected.Sidebar.TFrame", background=COLOR_HOVER, relief="flat")
+style.configure("Selected.Sidebar.TLabel", background=COLOR_HOVER, foreground=COLOR_FG)
+
+# Card styles for visual grouping
+style.configure("Card.TFrame", background=COLOR_CARD_BG, relief="flat", borderwidth=0)
+
+# Title and heading styles
+style.configure("Title.TLabel", background=COLOR_BG, foreground=COLOR_FG, 
+                font=('Segoe UI', 16, 'bold')) # Slightly larger for prominence
+style.configure("Subtitle.TLabel", background=COLOR_BG, foreground=COLOR_FG, 
+                font=('Segoe UI', 10, 'bold')) # Slightly smaller
+style.configure("SectionTitle.TLabel", background=COLOR_BG, foreground=COLOR_ACCENT, 
+                font=('Segoe UI', 11, 'bold')) # Slightly larger
+
+# Status message styles
+style.configure("Status.TFrame", background=COLOR_SECONDARY_BG)
+style.configure("Status.TLabel", background=COLOR_SECONDARY_BG, foreground=COLOR_FG)
+style.configure("Success.TFrame", background=COLOR_SUCCESS)
+style.configure("Success.TLabel", background=COLOR_SUCCESS, foreground="#FFFFFF")
+style.configure("Error.TFrame", background=COLOR_ERROR)
+style.configure("Error.TLabel", background=COLOR_ERROR, foreground="#FFFFFF")
+style.configure("Warning.TFrame", background=COLOR_WARNING)
+style.configure("Warning.TLabel", background=COLOR_WARNING, foreground="#000000")
+
+# Dialog styles
+style.configure("Dialog.TFrame", background=COLOR_BG)
+style.configure("Dialog.TLabel", background=COLOR_BG, foreground=COLOR_FG, 
+                font=('Segoe UI', 10))
+
+# Create main frames with better structure
+main_container = ttk.Frame(root, style="TFrame")
+main_container.pack(fill="both", expand=True)
 
 # Configure main grid layout
-root.grid_rowconfigure(0, weight=1)
-root.grid_columnconfigure(1, weight=1)
+main_container.grid_rowconfigure(0, weight=1)
+main_container.grid_columnconfigure(0, weight=0)  # Sidebar doesn't expand
+main_container.grid_columnconfigure(1, weight=1)  # Main content expands
+
+# Create sidebar and main content frames
+sidebar_frame = ttk.Frame(main_container, style="Sidebar.TFrame")
+main_frame = ttk.Frame(main_container, style="TFrame")
 
 # Pack main frames
-sidebar_frame.grid(row=0, column=0, sticky="ns")
-main_frame.grid(row=0, column=1, sticky="nsew")
+sidebar_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5)) # Add some right padding to sidebar
+main_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0)) # Add some left padding to main frame
+
+# Add a logo/title area at the top of the sidebar
+sidebar_header = ttk.Frame(sidebar_frame, style="Sidebar.TFrame")
+sidebar_header.pack(fill='x', pady=(10, 5))
+
+sidebar_title = ttk.Label(sidebar_header, text=_("sidebar_title"), style="Sidebar.TLabel", 
+                          font=('Segoe UI', 10, 'bold'))
+sidebar_title.pack(fill='x', padx=10, pady=0)
+
+sidebar_subtitle = ttk.Label(sidebar_header, text=_("sidebar_subtitle"), style="Sidebar.TLabel", 
+                           font=('Segoe UI', 8), foreground=COLOR_ACCENT)
+sidebar_subtitle.pack(fill='x', padx=10, pady=(0, 5))
+
+# Add a separator below the title
+title_separator = ttk.Separator(sidebar_frame, orient="horizontal")
+title_separator.pack(fill='x', padx=10, pady=0)
+
+# Create a search bar with modern styling
+search_frame = ttk.Frame(sidebar_frame, style="Sidebar.TFrame")
+search_frame.pack(fill='x', padx=10, pady=8)
+
+search_var = tk.StringVar()
+search_entry = ttk.Entry(search_frame, textvariable=search_var, style="TEntry")
+search_entry.pack(side='left', fill='x', expand=True)
+search_entry.bind("<KeyRelease>", search_songs)
+search_entry.insert(0, _("search_placeholder"))
+search_entry.bind("<FocusIn>", lambda e: search_entry.delete(0, "end") if search_entry.get() == _("search_placeholder") else None)
+search_entry.bind("<FocusOut>", lambda e: search_entry.insert(0, _("search_placeholder")) if search_entry.get() == "" else None)
 
 # Create a canvas in the sidebar frame
-canvas = tk.Canvas(sidebar_frame, bg=current_theme["bg"])
-canvas.pack(side="left", fill="both", expand=True)
+canvas = tk.Canvas(sidebar_frame, bg=COLOR_SECONDARY_BG, highlightthickness=0)
+canvas.pack(side="left", fill="both", expand=True, padx=0, pady=(0, 0))
 
 # Add a scrollbar to the canvas
-scrollbar = ttk.Scrollbar(sidebar_frame, orient="vertical", command=canvas.yview)
+scrollbar = ttk.Scrollbar(sidebar_frame, orient="vertical", command=canvas.yview, style="Vertical.TScrollbar")
 scrollbar.pack(side="right", fill="y")
 canvas.configure(yscrollcommand=scrollbar.set)
 
 # Create a frame inside the canvas to contain sidebar content
-sidebar_inner_frame = tk.Frame(canvas, bg=current_theme["bg"])
-canvas.create_window((0, 0), window=sidebar_inner_frame, anchor="nw")
+sidebar_inner_frame = ttk.Frame(canvas, style="Sidebar.TFrame")
+canvas_window = canvas.create_window((0, 0), window=sidebar_inner_frame, anchor="nw", width=canvas.winfo_reqwidth())
 
 # Bind the scrollbar to the canvas
-sidebar_inner_frame.bind("<Configure>", on_configure)
+sidebar_inner_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
 
-load_button = tk.Button(main_frame, text="Load Music", command=load_music_from_file, bg=current_theme["button_bg"], fg=current_theme["button_fg"])
-load_button.grid(row=0, column=0, pady=10, padx=10, sticky="ew")
+# Make the canvas expand with the window
+def on_window_resize(event):
+    canvas.itemconfig(canvas_window, width=sidebar_frame.winfo_width())
+    canvas.configure(scrollregion=canvas.bbox("all"))
 
-delay_slider = tk.Scale(main_frame, from_=0.01, to_=1.0, resolution=0.01, orient=tk.HORIZONTAL, label="Delay (seconds)", fg=current_theme["fg"], bg=current_theme["bg"])
-delay_slider.set(delay)
-delay_slider.grid(row=2, column=0, pady=10, padx=10, sticky="ew")
+canvas.bind('<Configure>', on_window_resize)
 
-auto_delay_var = tk.BooleanVar(value=auto_delay)
-auto_delay_checkbox = tk.Checkbutton(main_frame, text="Auto Delay", variable=auto_delay_var, command=lambda: toggle_auto_delay(auto_delay_var.get()), fg=current_theme["fg"], bg=current_theme["bg"], selectcolor=current_theme["bg"])
-auto_delay_checkbox.grid(row=1, column=0, pady=10, padx=10, sticky="ew")
+# Create a header for the main content area
+header_frame = ttk.Frame(main_frame, style="TFrame")
+header_frame.pack(fill="x", pady=(5, 5), padx=10)
 
-root.bind("<F2>", lambda event: stop_music)
-stop_button = tk.Button(main_frame, text="Stop Music", command=stop_music, bg=current_theme["button_bg"], fg=current_theme["button_fg"])
-stop_button.grid(row=5, column=0, pady=10, padx=10, sticky="ew")
+app_title = ttk.Label(header_frame, text=_("app_title"), style="Title.TLabel")
+app_title.pack(side="left")
 
-speed_slider = tk.Scale(main_frame, from_=-2.0, to_=2.0, resolution=0.1, orient=tk.HORIZONTAL, label="Speed Control", fg=current_theme["fg"], bg=current_theme["bg"])
+app_subtitle = ttk.Label(header_frame, text=_("app_subtitle"), style="TLabel", foreground=COLOR_INACTIVE)
+app_subtitle.pack(side="left", padx=(5, 0))
+
+# Add language switcher dropdown to the right of the header
+language_frame = ttk.Frame(header_frame, style="TFrame")
+language_frame.pack(side="right", padx=(10, 0))
+
+# Create a styled frame for the language selector
+language_selector_frame = ttk.Frame(language_frame, style="Card.TFrame")
+language_selector_frame.pack(side="right", padx=(5, 0))
+
+# Map language codes to their display names
+language_display = {
+    "en": "ENGLISH",
+    "zh": "中文",
+    "es": "ESPAÑOL",
+    "ja": "日本語"
+}
+
+language_var = tk.StringVar(value=current_language)
+
+# Function to update language display name
+def update_language_display(*args):
+    lang = language_var.get()
+    if lang in language_display:
+        language_button.config(text=language_display[lang])
+
+# Trace changes to the language variable
+language_var.trace_add("write", update_language_display)
+
+# Create a button that when clicked shows the dropdown
+language_button = ttk.Button(
+    language_selector_frame, 
+    text=language_display[current_language],
+    style="Language.TButton",
+    width=10
+)
+
+# Define custom styling for the language button and dropdown
+style.configure("Language.TButton", 
+                background=COLOR_SECONDARY_BG, 
+                foreground=COLOR_FG,
+                padding=(5, 2),
+                font=('Segoe UI', 9))
+style.map("Language.TButton", 
+          background=[('active', COLOR_HOVER), ('pressed', COLOR_ACCENT)])
+
+# Function to show dropdown on button click
+def show_language_dropdown(event=None):
+    # Get position of button
+    x = language_button.winfo_rootx()
+    y = language_button.winfo_rooty() + language_button.winfo_height()
+    
+    # Create dropdown menu
+    menu = tk.Menu(root, tearoff=0, bg=COLOR_SECONDARY_BG, fg=COLOR_FG, 
+                  activebackground=COLOR_HOVER, activeforeground=COLOR_FG,
+                  bd=0, relief="flat")
+    
+    # Add language options
+    for lang_code, lang_name in language_display.items():
+        menu.add_command(
+            label=lang_name, 
+            command=lambda lc=lang_code: set_language(lc),
+            font=('Segoe UI', 9)
+        )
+    
+    # Show the menu
+    menu.tk_popup(x, y)
+
+def set_language(lang_code):
+    language_var.set(lang_code)
+    switch_language(lang_code)
+
+# Bind the button click to show dropdown
+language_button.bind("<Button-1>", show_language_dropdown)
+language_button.pack(side="right")
+
+# Add load button to the right of the header
+load_button = ttk.Button(header_frame, text=_("load_music"), command=load_music_from_file, style="Accent.TButton")
+load_button.pack(side="right", padx=(0, 10))
+
+# Main content area with cards layout
+content_frame = ttk.Frame(main_frame, style="TFrame")
+content_frame.pack(fill="both", expand=True, padx=10, pady=(0, 5))
+
+# Now Playing section - Card 1
+now_playing_card = ttk.Frame(content_frame, style="Card.TFrame")
+now_playing_card.pack(fill="x", pady=(0, 8), ipady=4)
+
+now_playing_title = ttk.Label(now_playing_card, text=_("now_playing"), style="SectionTitle.TLabel")
+
+# Current song info display
+current_song_frame = ttk.Frame(now_playing_card, style="Card.TFrame")
+current_song_frame.pack(fill="x", padx=12, pady=(0, 5))
+
+current_song_label = ttk.Label(current_song_frame, text=_("no_song_loaded"), style="TLabel", font=('Segoe UI', 10))
+current_song_label.pack(anchor="w", padx=0, pady=2)
+
+# Status indicator (playing/paused)
+status_indicator_frame = ttk.Frame(now_playing_card, style="Card.TFrame")
+status_indicator_frame.pack(fill="x", padx=12, pady=(0, 5))
+
+play_status_label = ttk.Label(status_indicator_frame, text="▶ Ready", style="TLabel", foreground=COLOR_INACTIVE)
+play_status_label.pack(side="left", padx=0, pady=2)
+
+# Playback controls in a horizontal layout
+playback_frame = ttk.Frame(now_playing_card, style="Card.TFrame")
+playback_frame.pack(fill="x", padx=12, pady=5)
+
+play_button = ttk.Button(playback_frame, text=_("play_pause"), command=toggle_play_pause, style="Success.TButton")
+play_button.pack(side="left", padx=(0, 5))
+
+stop_button = ttk.Button(playback_frame, text=_("stop"), command=stop_music, style="Error.TButton")
+stop_button.pack(side="left")
+
+# Settings section - Card 2
+settings_card = ttk.Frame(content_frame, style="Card.TFrame")
+settings_card.pack(fill="x", pady=(0, 8), ipady=8)
+
+settings_title = ttk.Label(settings_card, text=_("playback_settings"), style="SectionTitle.TLabel")
+settings_title.pack(anchor="w", padx=12, pady=(8, 5))
+
+# Two-column grid for settings
+settings_grid = ttk.Frame(settings_card, style="Card.TFrame")
+settings_grid.pack(fill="x", padx=12, pady=5)
+settings_grid.columnconfigure(0, weight=1)
+settings_grid.columnconfigure(1, weight=1)
+
+# Auto sustain checkbox with modern styling
+auto_sustain_var = tk.BooleanVar(value=auto_sustain)
+auto_sustain_frame = ttk.Frame(settings_grid, style="Card.TFrame")
+auto_sustain_frame.grid(row=0, column=0, sticky="ew", padx=(0, 5), pady=2)
+
+auto_sustain_checkbox = ttk.Checkbutton(auto_sustain_frame, 
+                                       text=_("auto_sustain_on") if auto_sustain else _("auto_sustain_off"), 
+                                       variable=auto_sustain_var, 
+                                       command=lambda: toggle_auto_sustain(auto_sustain_var.get()),
+                                       style="TCheckbutton")
+auto_sustain_checkbox.pack(anchor="w", padx=5, pady=5)
+
+# Humanizer checkbox with modern styling
+humanizer_var = tk.BooleanVar(value=humanizer_enabled)
+humanizer_frame = ttk.Frame(settings_grid, style="Card.TFrame")
+humanizer_frame.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=2)
+
+humanizer_checkbox = ttk.Checkbutton(humanizer_frame, 
+                                    text=_("humanizer_on") if humanizer_enabled else _("humanizer_off"), 
+                                    variable=humanizer_var, 
+                                    command=toggle_humanizer,
+                                    style="TCheckbutton")
+humanizer_checkbox.pack(anchor="w", padx=5, pady=5)
+
+# Humanizer strength slider (initially hidden)
+humanizer_strength_frame = ttk.Frame(humanizer_frame, style="Card.TFrame")
+humanizer_strength_header = ttk.Frame(humanizer_strength_frame, style="Card.TFrame")
+humanizer_strength_header.pack(fill="x", expand=True)
+
+humanizer_strength_label = ttk.Label(humanizer_strength_header, text=_("humanize_amount"), style="TLabel")
+humanizer_strength_label.pack(side="left", anchor="w", padx=0, pady=(0, 2))
+
+humanizer_strength_value = ttk.Label(humanizer_strength_header, text=f"{humanizer_strength} {_('ms')}", style="TLabel", foreground=COLOR_ACCENT)
+humanizer_strength_value.pack(side="right", anchor="e", padx=0, pady=(0, 2))
+
+humanizer_strength_slider = ttk.Scale(humanizer_strength_frame, from_=1, to=50, orient=tk.HORIZONTAL, 
+                                     style="Horizontal.TScale", command=update_humanizer_strength)
+humanizer_strength_slider.set(humanizer_strength)
+humanizer_strength_slider.pack(fill="x", pady=(0, 0))
+
+# Initially hide the humanizer strength slider
+if not humanizer_enabled:
+    humanizer_strength_frame.pack_forget()
+
+# Queue checkbox for continuous playback
+queue_var = tk.BooleanVar(value=queue_enabled)
+queue_settings_frame = ttk.Frame(settings_grid, style="Card.TFrame")
+queue_settings_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(5, 0))
+
+queue_checkbox = ttk.Checkbutton(queue_settings_frame, 
+                                text=_("queue_mode_on") if queue_enabled else _("queue_mode_off"), 
+                                variable=queue_var, 
+                                command=toggle_queue,
+                                style="TCheckbutton")
+queue_checkbox.pack(anchor="w", padx=5, pady=5)
+
+# Always on Top checkbox
+always_on_top_var = tk.BooleanVar(value=always_on_top)
+always_on_top_frame = ttk.Frame(settings_grid, style="Card.TFrame")
+always_on_top_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(5, 0))
+
+always_on_top_checkbox = ttk.Checkbutton(always_on_top_frame,
+                                         text=_("always_on_top_on") if always_on_top else _("always_on_top_off"),
+                                         variable=always_on_top_var,
+                                         command=toggle_always_on_top,
+                                         style="TCheckbutton")
+always_on_top_checkbox.pack(anchor="w", padx=5, pady=5)
+
+# Speed setting in a cleaner layout
+speed_frame = ttk.Frame(settings_grid, style="Card.TFrame")
+speed_frame.grid(row=4, column=0, sticky="ew", padx=(0, 5), pady=2)
+
+speed_label = ttk.Label(speed_frame, text=_("playback_speed"), style="TLabel")
+speed_label.pack(anchor="w", padx=5, pady=(5, 2))
+
+speed_value_label = ttk.Label(speed_frame, text=_("normal_speed"), style="TLabel", foreground=COLOR_ACCENT)
+speed_value_label.pack(anchor="w", padx=5, pady=(0, 2))
+
+speed_slider = ttk.Scale(speed_frame, from_=-1.0, to_=1.0, orient=tk.HORIZONTAL, 
+                        style="Horizontal.TScale", command=update_speed_label)
 speed_slider.set(speed)
-speed_slider.grid(row=3, column=0, pady=10, padx=10, sticky="ew")
+speed_slider.pack(fill="x", padx=5, pady=(0, 5))
 
-# Define scrollbar style
-style = ttk.Style()
-style.theme_use('clam')
-style.configure("Vertical.TScrollbar", background=current_theme["bg"], troughcolor=current_theme["button_bg"], bordercolor=current_theme["button_bg"])
+# Delay settings
+delay_frame = ttk.Frame(settings_grid, style="Card.TFrame")
+delay_frame.grid(row=4, column=1, sticky="ew", padx=(5, 0), pady=2)
+
+delay_header = ttk.Frame(delay_frame, style="Card.TFrame")
+delay_header.pack(fill="x", expand=True)
+
+delay_title = ttk.Label(delay_header, text=_("note_delay"), style="TLabel")
+delay_title.pack(side="left", anchor="w", padx=5, pady=(5, 2))
+
+delay_value_label = ttk.Label(delay_header, text=f"{delay:.2f} {_('seconds')}", style="TLabel", foreground=COLOR_ACCENT)
+delay_value_label.pack(side="right", anchor="e", padx=5, pady=(5, 2))
+
+delay_slider = ttk.Scale(delay_frame, from_=0.01, to_=1.0, orient=tk.HORIZONTAL, 
+                        style="Horizontal.TScale", command=update_delay_label)
+delay_slider.set(delay)
+delay_slider.pack(fill="x", padx=5, pady=(0, 5))
+
+# Queue Management Card
+queue_card = ttk.Frame(content_frame, style="Card.TFrame")
+queue_card.pack(fill="x", pady=(0, 8), ipady=8)
+
+queue_title = ttk.Label(queue_card, text=_("queue_management"), style="SectionTitle.TLabel")
+queue_title.pack(anchor="w", padx=12, pady=(8, 5))
+
+# Queue controls
+queue_controls_frame = ttk.Frame(queue_card, style="Card.TFrame")
+queue_controls_frame.pack(fill="x", padx=12, pady=(0, 3))
+
+prev_queue_btn = ttk.Button(queue_controls_frame, text=_("previous"), command=play_previous_in_queue, style="TButton", width=10)
+prev_queue_btn.pack(side="left", padx=(0, 3))
+
+next_queue_btn = ttk.Button(queue_controls_frame, text=_("next"), command=play_next_in_queue, style="TButton", width=10)
+next_queue_btn.pack(side="left", padx=(0, 3))
+
+clear_queue_btn = ttk.Button(queue_controls_frame, text=_("clear_queue"), command=clear_queue, style="Error.TButton", width=10)
+clear_queue_btn.pack(side="right")
+
+# Add queue information to the welcome message in the English translations
+TRANSLATIONS["en"]["welcome"] = "Welcome to SkyMusic Player! Press F1 to play/pause, F2 to stop. Queue system is enabled - add songs from your library to the queue."
+
+# Update the show_status_message function to show a quick help message about queuing when the application starts
+root.after(1000, lambda: show_status_message("Queue system is enabled. Use '+ Queue' buttons to add songs to the queue.", "info"))
+
+# Add a function to show a quick help about the queue when queue is enabled
+def show_queue_help():
+    help_text = """Queue System Help:
+    
+1. Add songs to queue using '+ Queue' buttons in the song library
+2. Use Previous/Next buttons to navigate the queue
+3. Reorder songs with ▲ and ▼ buttons
+4. Remove songs with ✕ button
+5. Clear the entire queue with 'Clear Queue' button
+6. Turn queue mode on/off with the checkbox in settings
+    
+When queue mode is enabled, songs will play one after another automatically."""
+    
+    help_window = tk.Toplevel(root)
+    help_window.title("Queue Help")
+    help_window.configure(bg=COLOR_BG)
+    help_window.grab_set()  # Make the window modal
+    
+    # Set window size and position
+    window_width = 500
+    window_height = 280
+    position_x = root.winfo_x() + (root.winfo_width() // 2) - (window_width // 2)
+    position_y = root.winfo_y() + (root.winfo_height() // 2) - (window_height // 2)
+    help_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
+    
+    # Create a styled frame for the help content
+    frame = ttk.Frame(help_window, style="Dialog.TFrame")
+    frame.pack(fill="both", expand=True, padx=15, pady=15)
+    
+    # Add help title
+    help_title = ttk.Label(frame, text="Queue System Help", style="Dialog.TLabel", 
+                          font=('Segoe UI', 12, 'bold'), foreground=COLOR_ACCENT)
+    help_title.pack(pady=(0, 15))
+    
+    # Add help text
+    help_label = ttk.Label(frame, text=help_text, style="Dialog.TLabel", wraplength=450, justify="left")
+    help_label.pack(pady=(0, 20))
+    
+    # Add close button
+    ok_button = ttk.Button(frame, text="OK", command=help_window.destroy, style="Accent.TButton", width=10)
+    ok_button.pack()
+
+# Add a help button to the queue controls section
+help_btn = ttk.Button(queue_controls_frame, text="?", width=2, command=show_queue_help, style="TButton")
+help_btn.pack(side="left", padx=(5, 0))
+
+# Queue list
+queue_list_frame = ttk.Frame(queue_card, style="Card.TFrame")
+queue_list_frame.pack(fill="both", expand=True, padx=12, pady=5)
+
+# Initialize queue display
+update_queue_display()
+
+# Add keyboard shortcuts card
+keyboard_card = ttk.Frame(content_frame, style="Card.TFrame")
+keyboard_card.pack(fill="x", pady=(0, 8), ipady=8)
+
+keyboard_title = ttk.Label(keyboard_card, text=_("keyboard_shortcuts"), style="SectionTitle.TLabel")
+keyboard_title.pack(anchor="w", padx=12, pady=(8, 5))
+
+shortcut_frame = ttk.Frame(keyboard_card, style="Card.TFrame")
+shortcut_frame.pack(fill="x", padx=12, pady=(0, 8))
+
+# Create a grid for shortcuts
+shortcut_frame.columnconfigure(0, weight=0)  # Key column
+shortcut_frame.columnconfigure(1, weight=1)  # Description column
+
+# F1 shortcut
+f1_key = ttk.Label(shortcut_frame, text="F1", style="TLabel", foreground=COLOR_ACCENT, font=('Segoe UI', 9, 'bold'))
+f1_key.grid(row=0, column=0, sticky="w", padx=(0, 15), pady=2)
+f1_desc = ttk.Label(shortcut_frame, text=_("play_pause_desc"), style="TLabel")
+f1_desc.grid(row=0, column=1, sticky="w", pady=2)
+
+# F2 shortcut
+f2_key = ttk.Label(shortcut_frame, text="F2", style="TLabel", foreground=COLOR_ACCENT, font=('Segoe UI', 9, 'bold'))
+f2_key.grid(row=1, column=0, sticky="w", padx=(0, 15), pady=2)
+f2_desc = ttk.Label(shortcut_frame, text=_("stop_desc"), style="TLabel")
+f2_desc.grid(row=1, column=1, sticky="w", pady=2)
+
+# Add status frame for feedback messages
+status_frame = ttk.Frame(main_frame, style="Status.TFrame")
+status_label = ttk.Label(status_frame, text="", style="Status.TLabel", anchor="center")
+status_label.pack(fill="both", expand=True, padx=3, pady=3)
+# Status frame is hidden initially and will be shown when needed
 
 # Make scrollbar respond to mouse wheel events
 def _on_mousewheel(event):
@@ -308,9 +1798,164 @@ canvas.bind_all("<MouseWheel>", _on_mousewheel)
 def on_configure(event):
     canvas.configure(scrollregion=canvas.bbox("all"))
 
+# Update the update_sidebar function to create more visually appealing song entries
+def update_sidebar(notes=None):
+    # Clear existing widgets in the sidebar
+    for widget in sidebar_inner_frame.winfo_children():
+        widget.destroy()
+    
+    # Load saved songs
+    global saved_music, current_loaded_song_id
+    
+    # Initialize current_loaded_song_id if it doesn't exist
+    if 'current_loaded_song_id' not in globals():
+        current_loaded_song_id = ""
+    
+    # Filter songs based on search query
+    search_query = search_var.get().lower()
+    if search_query == _("search_placeholder").lower():
+        search_query = ""
+    
+    filtered_songs = []
+    for song in saved_music:
+        if search_query in song.get("name", "").lower():
+            filtered_songs.append(song)
+    
+    if not filtered_songs:
+        no_songs_label = ttk.Label(sidebar_inner_frame, text=_("no_songs_found"), style="Sidebar.TLabel")
+        no_songs_label.pack(pady=10, padx=10)
+        # Make sure to update the scrollregion after changes
+        sidebar_inner_frame.update_idletasks()
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        return
+    
+    # Add each song to the sidebar with improved styling
+    for i, song in enumerate(filtered_songs):
+        # Check if this is the currently loaded song
+        is_current_song = song.get('id', '') == current_loaded_song_id
+        song_style = "Selected.Sidebar.TFrame" if is_current_song else "Sidebar.TFrame"
+        label_style = "Selected.Sidebar.TLabel" if is_current_song else "Sidebar.TLabel"
+        
+        song_frame = ttk.Frame(sidebar_inner_frame, style=song_style)
+        song_frame.pack(fill="x", padx=10, pady=(0, 1))
+        
+        # Song container
+        song_container = ttk.Frame(song_frame, style=song_style)
+        song_container.pack(fill="x", expand=True, padx=0, pady=0)
+        
+        # Song name with ellipsis for long names
+        song_name = song.get("name", f"Song {i+1}")
+        if len(song_name) > 25:
+            song_name = song_name[:22] + "..."
+        
+        # Add a playing indicator if this is the current song
+        prefix = "► " if is_current_song else ""
+        song_label = ttk.Label(song_container, text=f"{prefix}{song_name}", style=label_style, anchor="w")
+        song_label.pack(fill="x", padx=8, pady=(8, 1))
+        
+        # Song metadata (show 'old format' indicator if applicable)
+        format_text = _("legacy_format") if song.get("oldFormat", False) else ""
+        format_label = ttk.Label(song_container, text=format_text, style=label_style, 
+                                foreground=COLOR_INACTIVE, font=('Segoe UI', 7))
+        format_label.pack(fill="x", padx=8, pady=(0, 3))
+        
+        # Buttons container
+        button_frame = ttk.Frame(song_container, style=song_style)
+        button_frame.pack(fill="x", padx=8, pady=(0, 5))
+        
+        # Load button - Fix: Use the filtered_songs index instead of i
+        load_btn = ttk.Button(button_frame, text=_("load"), 
+                             command=lambda song=song: load_music(song), 
+                             style="Sidebar.TButton", width=6)
+        load_btn.pack(side="left", padx=(0, 3))
+        
+        # Queue button - always show the queue button
+        queue_btn = ttk.Button(button_frame, text=_("add_queue"), 
+                             command=lambda song_id=song.get('id', ''): add_to_queue(song_id), 
+                             style="Sidebar.TButton", width=6)
+        queue_btn.pack(side="left", padx=(0, 3))
+        
+        # Delete button - Fix: Use the song's ID to safely delete
+        delete_btn = ttk.Button(button_frame, text=_("delete"), 
+                               command=lambda song_id=song.get('id', ''): delete_song_by_id(song_id), 
+                               style="Sidebar.TButton", width=6)
+        delete_btn.pack(side="left")
+        
+        # Store the song reference in the frame for reference
+        song_frame.song = song
+        
+        # Add a separator after each song except the last one
+        if i < len(filtered_songs) - 1:
+            separator = ttk.Separator(sidebar_inner_frame, orient="horizontal")
+            separator.pack(fill="x", padx=5)
+    
+    # Make sure to update the scrollregion after changes
+    sidebar_inner_frame.update_idletasks()
+    canvas.configure(scrollregion=canvas.bbox("all"))
+
+# Add a new function to delete song by ID rather than by index
+def delete_song_by_id(song_id):
+    global saved_music
+    song_name = "Unknown Song"
+    for i, song in enumerate(saved_music):
+        if song.get('id', '') == song_id:
+            song_name = song.get("name", f"Song {i+1}")
+            del saved_music[i]
+            break
+    
+    with open(SAVED_SONGS_FILE, 'w') as f:
+        json.dump(saved_music, f)
+    update_sidebar()
+    show_status_message(_("delete_success", name=song_name), "warning")
+
+# Initialize the UI
 load_saved_songs()
 load_last_song()
 update_sidebar()
-toggle_auto_delay(auto_delay)
+toggle_auto_sustain(auto_sustain)
+
+# Show a welcome message
+show_status_message(_("welcome"), "info")
+
+# Add functions to reorder queue items
+def move_up_in_queue(index):
+    """Move a song up in the queue"""
+    global play_queue, current_queue_index
+    
+    if index <= 0 or index >= len(play_queue):
+        return False
+    
+    # Swap the item with the one above it
+    play_queue[index], play_queue[index-1] = play_queue[index-1], play_queue[index]
+    
+    # Adjust current queue index if needed
+    if current_queue_index == index:
+        current_queue_index -= 1
+    elif current_queue_index == index - 1:
+        current_queue_index += 1
+    
+    # Update the queue display
+    update_queue_display()
+    return True
+
+def move_down_in_queue(index):
+    """Move a song down in the queue"""
+    global play_queue, current_queue_index
+    
+    if index < 0 or index >= len(play_queue) - 1:
+        return False
+    
+    # Swap the item with the one below it
+    play_queue[index], play_queue[index+1] = play_queue[index+1], play_queue[index]
+    
+    # Adjust current queue index if needed
+    if current_queue_index == index:
+        current_queue_index += 1
+    elif current_queue_index == index + 1:
+        current_queue_index -= 1
+    
+    # Update the queue display
+    update_queue_display()
+    return True
 
 root.mainloop()
